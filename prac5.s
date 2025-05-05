@@ -253,6 +253,10 @@ minus	cmp r1, #'-'			;
 		strne r3, [r2]
 		b f_uart
 
+
+
+
+
 fin_6	cmp r1, #'6'	
 		ldreq r2, =fin
 		strbeq r5, [r2]
