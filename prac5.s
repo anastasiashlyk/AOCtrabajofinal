@@ -12,9 +12,9 @@ T0_IR			EQU 0xE0004000
 
 semilla 		EQU 55
 	
-pos_r1			DCD 0x40007e01
-pos_r2			DCD 0x40007e1D
-pos_pelota		DCD 0x40007e0F
+pos_r1			DCD 0
+pos_r2			DCD 0
+pos_pelota		DCD 0
 	
 puntosA			DCD 0
 puntosB			DCD 0
@@ -80,6 +80,7 @@ fin_jugada
 		str r2, [r3]			;gurdamos la posicion de pelota en memoria
 		
 		and r1, r0, #0x3000		; numero aleatorio para dirección de movimiento de la pelota
+		mov r1, r1, lsr #12
 		ldr r2, =dir3
 		strb r1, [r2]			
 		
@@ -90,21 +91,23 @@ fin_jugada
 		add r2,r2, r1, lsl#5	; 
 		mov r3, #raqueta
 		ldr r4, =pos_r1
-		str r2, [r4]
+		str r2, [r4]					; r2 = dirrecion de la ficha inferior de la raqueta
 		
 		;limites r1
-		ldr r10, =0x40007e01			; limite superior
-		ldr r11, =0x40007fe1			; limite inferior
+		ldr r10, =0x40007e01			; base r1
+		strb r3, [r2]					; 
 		
-		mov r1, #5
+		mov r1, #4
 if_a	cmp r1, #0
 		beq f_a
-		add r2, r2, #32		
-		cmp r2, r10
-		movlt r2, r11
-		cmp r2, r11
-		movgt r2, r10
-		strb r3,[r2]
+
+		sub r2, r2, #32
+		and r4, r2, #0xFF0
+		mov r4, r4, lsr #5
+		and r4, r4, #0xF				; mod 16 
+		
+		add r11, r10, r4, lsl#5
+		strb r3, [r11]
 		sub r1, r1, #1
 		b if_a
 		
@@ -119,17 +122,18 @@ f_a		;raqueta 2
 		
 		;limites r2
 		ldr r10, =0x40007e1D			; limite superior
-		ldr r11, =0x40007f1D			; limite inferior
+		strb r3, [r2]					; 
 		
-		mov r1, #5
+		mov r1, #4
 if_b	cmp r1, #0
 		beq f_b
-		add r2, r2, #32		
-		cmp r2, r10
-		movlt r2, r11
-		cmp r2, r11
-		movgt r2, r10
-		strb r3,[r2]
+		sub r2, r2, #32
+		and r4, r2, #0xFF0
+		mov r4, r4, lsr #5
+		and r4, r4, #0xF				; mod 16 
+		
+		add r11, r10, r4, lsl#5
+		strb r3, [r11]
 		sub r1, r1, #1
 		b if_b
 f_b
@@ -279,7 +283,7 @@ if_d	cmp r5, r6
 		mov r3, #1
 		strb r3, [r2]			; rebotamos 
 		b f_dir3
-f_if_d	add r6, r6, #32
+f_if_d	sub r6, r6, #32
 		sub r4, r4, #1
 		b else_a
 		
@@ -334,7 +338,7 @@ if_f	cmp r5, r6
 		mov r3, #0
 		strb r3, [r2]			; rebotamos 
 		b f_dir3
-f_if_f	add r6, r6, #32
+f_if_f	sub r6, r6, #32
 		sub r4, r4, #1
 		b else_c
 		
@@ -389,7 +393,7 @@ if_k	cmp r5, r6
 		mov r3, #3
 		strb r3, [r2]			; rebotamos 
 		b f_dir3
-f_if_k	add r6, r6, #32
+f_if_k	sub r6, r6, #32
 		sub r4, r4, #1
 		b else_e
 		
@@ -443,7 +447,7 @@ if_m	cmp r5, r6
 		mov r3, #2
 		strb r3, [r2]			; rebotamos 
 		b f_dir3
-f_if_m	add r6, r6, #32
+f_if_m	sub r6, r6, #32
 		sub r4, r4, #1
 		b else_g
 		
@@ -574,7 +578,7 @@ limpiar_pantalla
 		
 		ldr r0, =0x40007E00
 		ldr r1, =0x40007FFF
-		mov r2,#0
+		mov r2,#20
 buc_lp	cmp r0, r1
 		bgt fin_lp
 		str r2, [r0]
