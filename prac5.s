@@ -12,7 +12,7 @@ T0_IR			EQU 0xE0004000
 
 semilla 		EQU 55
 	
-pos_r1			DCD 0
+pos_r1			DCD 0			; empezando desde abajo
 pos_r2			DCD 0
 pos_pelota		DCD 0
 	
@@ -228,8 +228,26 @@ fin_6	cmp r1, #'6'
 		strb r5, [r2]
 		b f_uart
 ;----------------------------------------------------------------------------------------------------------------------------------------------------
+		;pasamos a subrutina de movimiento de raqueta 1;
+		; argumentos: dirrecion base raqueta1, dir pos_raq1, dir1
+f_uart	ldr r0, =dir1
+		ldr r0,[r0]
+		ldr r1, =pos_r1		; dir pos actual raqueta
+		ldr r2, =0x40007E01	; posicion base 
+		push{r0, r1, r2}
+		bl mover 
+		add sp, sp, #12
+		
+		ldr r0, =dir2
+		ldr r0,[r0]
+		ldr r1, =pos_r2		; dir pos actual raqueta
+		ldr r2, =0x40007E1D	; posicion base 
+		push{r0, r1, r2}
+		bl mover 
+		add sp, sp, #12
+		
+		
 
-f_uart	
 ; movimiento pelota			r0, r2
 		ldr r1, =next			; r1=dir next 
 		ldr r2, [r1]			; r2=next
@@ -578,7 +596,7 @@ limpiar_pantalla
 		
 		ldr r0, =0x40007E00
 		ldr r1, =0x40007FFF
-		mov r2,#20
+		mov r2,#' '
 buc_lp	cmp r0, r1
 		bgt fin_lp
 		str r2, [r0]
@@ -587,6 +605,91 @@ buc_lp	cmp r0, r1
 		
 fin_lp	pop{r0-r2}
 		pop{fp,pc}
+
+
+
+;subrutina para mover raquetas arg: dirrecion base raqueta1, dir pos_raq1, dir1 (-1 arriba, 0 stop, 1 abajo)
+mover 
+		push {lr, fp}
+		mov fp, sp
+		push{r0-r11}
+		
+		ldr r0, [fp, #16]		; r0=pos_base_raqueta
+		ldr r1, [fp,#12]		; r1=dir pos_raq
+		ldr r2, [r1]			; r2=pos_raq
+		ldr r3, [fp,#8]			; r3=dir raqueta
+		
+		mov r7, #' '
+		mov r8, #raqueta
+mov_arriba
+		cmp r3, #-1
+		bne mov_abajo
+		ldr r4, =next
+		ldr r5, [r4]			;r5 = next
+		ldr r6, =crono
+		
+m_if	ldr r7, [r6]			;r7=crono
+		cmp r7, r5				; ¿crono < next?
+		blt m_if
+		
+		ldr r6, =max
+		ldr r6, [r6]
+		add r5, r7, r6
+		str r5, [r4]
+		
+		strb r7, [r2]			; quitamos X de abajo
+		sub r2, r2, #32			; nueva posicion actual
+		str r2, [r1]			; guardamos posicion actual en memoria
+		
+		mov r10, #5
+		sub r2, r10, lsl#5			; posicion de la nueva ficha
+		
+		and r2, r2, #0xFF0
+		mov r2, r2, lsr #5
+		and r2, r2, #0xF				; mod 16 
+		
+		add r11, r0, r2, lsl#5			; 
+		strb r8, [r11]					; dibujar nueva ficha
+		b fin_mover
+		
+mov_abajo
+		cmp r3, #1
+		bne fin_mover
+		ldr r4, =next
+		ldr r5, [r4]			;r5 = next
+		ldr r6, =crono
+		
+m2_if	ldr r7, [r6]			;r7=crono
+		cmp r7, r5				; ¿crono < next?
+		blt m2_if
+		
+		ldr r6, =max
+		ldr r6, [r6]
+		add r5, r7, r6
+		str r5, [r4]
+		
+		add r2, r2, #32			; 
+		strb r7, [r2]			; dibujamos nueva ficha
+		str r2, [r1]			; guardamos posicion actual en memoria
+		
+		mov r10, #6
+		sub r2, r10, lsl#5			; posicion de la ficha para quitar
+		
+		and r2, r2, #0xFF0
+		mov r2, r2, lsr #5
+		and r2, r2, #0xF				; mod 16 
+		
+		add r11, r0, r2, lsl#5			; 
+		strb r7, [r11]					; quitar ficha del arriba
+		b fin_mover
+
+fin_mover
+		pop{r0-r11}
+		pop{fp, pc}
+
+
+
+
 
 		END
 
