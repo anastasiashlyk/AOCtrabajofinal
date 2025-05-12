@@ -23,7 +23,7 @@ pelota			EQU '*'
 raqueta			EQU 'X'
 
 crono 			DCD 0 			; contador de centesimas de segundo
-max				DCD 3 			; velocidad de movimiento en centesimas s. 
+max				DCD 8 			; velocidad de movimiento en centesimas s. 
 next 			DCD 0			; instante siguiente movimiento pelota
 next1			DCD 0			; instante siguiente movimiento raqueta1
 dir1			DCB	0			; mov raqueta izda (-1 arriba, 0 stop, 1 abajo)
@@ -33,6 +33,11 @@ fin				DCB 0			; si 1 fin del programa
 tecla_r1		DCB 0			; tecla para controlar raq1
 tecla_r2		DCB 0			; tecla para controlar raq2
 tecla_vel		DCB 0 			; tecla para controlar velocidad
+tecla_ini		DCB 0
+
+paloderch		DCB 0
+paloizq			DCB 0
+circulo			DCB 0
 
 		AREA codigo,CODE
 		EXPORT inicio			; forma de enlazar con el startup.s
@@ -63,6 +68,10 @@ inicio	; se recomienda poner punto de parada (breakpoint) en la primera
 		bl srand
 		add sp, sp, #4	
 
+		
+
+		bl pantalla_inicial
+		
 fin_jugada
 		bl limpiar_pantalla
 		
@@ -78,6 +87,7 @@ fin_jugada
 		bl rand
 		pop {r0}				; r0= num aleatorio
 		
+
 
 ;dibujar pantalla inicial*******************************************************************************************************************
 		;dibujamos pelota en posicion aleatoria
@@ -600,7 +610,14 @@ rsi_teclado
 ;tratamiento interrupcion
 		ldr r0, =UART_RDAT		;
 		ldrb r1, [r0]
-		bic r1, r1, #2_100000	;paso a mayusculas
+		
+teclaini
+		ldr r2, =tecla_ini
+		cmp r1, #' '
+		bne one
+		strbeq r1, [r2]
+		b fin_int
+one		bic r1, r1, #2_100000	;paso a mayusculas
 		
 		ldr r2, =tecla_r1
 		cmp r1, #'A'
@@ -802,6 +819,242 @@ mov_abajo2
 fin_mover2
 		pop{r0-r11}
 		pop{fp, pc}
+
+
+
+
+
+;Hacer pantalla inicial y cuando pulsen espacio que empiece el juego
+		;Poner la pantalla en blanco
+pantalla_inicial
+		push {lr, fp}
+		mov fp, sp
+		push {r0-r3}
+		
+		;mov r1,#0
+		;ldr r2,=0x40007E00
+		;mov r3,#0
+		;ldr r4,=espacio
+comppa	;cmp r3,#512
+		;beq finalpa
+		;strb r4,[r2]
+		;add r2,r2,#1
+		;add r3,r3,#1
+		;b comppa
+		bl limpiar_pantalla 
+		
+		;dibujar circulos
+finalpa	ldr r0,=0x40007e00	
+		;ldr r1,=paloderch
+		;ldr r2,=paloizq
+		mov r3,#'O'
+		;parte de arriba
+		add r0,r0,#33			
+		mov r4,#0
+bucle4	cmp r4,#30
+		beq fuera
+	
+		strb r3,[r0]
+		add r0,r0,#1
+		add r4,r4,#1
+		b bucle4
+		;lados
+fuera	add r0,r0,#2
+		strb r3,[r0]
+		mov r4,#0
+bucle2	cmp r4,#12			;hasta que i sea igual a 12
+		beq fuera2
+		add r0,r0,#29
+		strb r3,[r0]
+		add r0,r0,#3
+		strb r3,[r0]
+		add r4,r4,#1
+		b bucle2
+		;parte de abajo
+fuera2	add r0,r0,#29
+		strb r3,[r0]
+		add r0,r0,#3
+		mov r4,#0
+bucle3	cmp r4,#30
+		beq fuera3
+	
+		strb r3,[r0]
+		add r0,r0,#1
+		add r4,r4,#1
+		b bucle3
+fuera3
+		;estrellitas
+		;estrella izquierda
+		ldr r0,=0x40007f60
+		add r1,r0,#4
+		mov r2,#'|'
+		strb r2,[r1]
+		add r1,r1,#31
+		mov r2,#'-'
+		strb r2,[r1]
+		add r1,r1,#2
+		mov r2,#'-'
+		strb r2,[r1]
+		add r1,r1,#31
+		mov r2,#'|'
+		strb r2,[r1]
+		;estrella derecha
+		ldr r0,=0x40007f60
+		add r1,r0,#27
+		mov r2,#'|'
+		strb r2,[r1]
+		add r1,r1,#31
+		mov r2,#'-'
+		strb r2,[r1]
+		add r1,r1,#2
+		mov r2,#'-'
+		strb r2,[r1]
+		add r1,r1,#31
+		mov r2,#'|'
+		strb r2,[r1]
+		
+		;Palabra tenis
+		ldr r0,=0x40007eA0
+		add r1,r0,#13
+		mov r2,#'T'
+		strb r2,[r1]
+		
+		add r1,r1,#1
+		mov r2,#'E'
+		strb r2,[r1]
+		
+		add r1,r1,#1
+		mov r2,#'N'
+		strb r2,[r1]
+		
+		add r1,r1,#1
+		mov r2,#'I'
+		strb r2,[r1]
+		
+		add r1,r1,#1
+		mov r2,#'S'
+		strb r2,[r1]
+		
+		;palabra bea y anastasia
+		ldr r0,=0x40007eE0
+		add r1,r0,#11
+		mov r2,#'A'
+		strb r2,[r1]
+		
+		add r1,r1,#1
+		mov r2,#'N'
+		strb r2,[r1]
+		
+		add r1,r1,#1
+		mov r2,#'A'
+		strb r2,[r1]
+		
+		add r1,r1,#1
+		mov r2,#'S'
+		strb r2,[r1]
+		
+		add r1,r1,#1
+		mov r2,#'T'
+		strb r2,[r1]
+		
+		add r1,r1,#1
+		mov r2,#'A'
+		strb r2,[r1]
+		
+		add r1,r1,#1
+		mov r2,#'S'
+		strb r2,[r1]
+		
+		add r1,r1,#1
+		mov r2,#'I'
+		strb r2,[r1]
+		
+		add r1,r1,#1
+		mov r2,#'A'
+		strb r2,[r1]
+		
+		add r1,r1,#28
+		mov r2,#'Y'
+		strb r2,[r1]
+		
+		add r1,r1,#29
+		mov r2,#'B'
+		strb r2,[r1]
+		
+		add r1,r1,#1
+		mov r2,#'E'
+		strb r2,[r1]
+		
+		add r1,r1,#1
+		mov r2,#'A'
+		strb r2,[r1]
+		
+		add r1,r1,#1
+		mov r2,#'T'
+		strb r2,[r1]
+	
+		add r1,r1,#1
+		mov r2,#'R'
+		strb r2,[r1]
+	
+		add r1,r1,#1
+		mov r2,#'I'
+		strb r2,[r1]
+	
+		add r1,r1,#1
+		mov r2,#'Z'
+		strb r2,[r1]
+	
+		;space to start
+		ldr r0,=0x40007f80
+		add r1,r0,#9
+		mov r2,#'S'
+		strb r2,[r1]
+		add r1,r1,#1
+		mov r2,#'P'
+		strb r2,[r1]
+		add r1,r1,#1
+		mov r2,#'A'
+		strb r2,[r1]
+		add r1,r1,#1
+		mov r2,#'C'
+		strb r2,[r1]
+		add r1,r1,#1
+		mov r2,#'E'
+		strb r2,[r1]
+		add r1,r1,#2
+		mov r2,#'T'
+		strb r2,[r1]
+		add r1,r1,#1
+		mov r2,#'O'
+		strb r2,[r1]
+		add r1,r1,#2
+		mov r2,#'S'
+		strb r2,[r1]
+		add r1,r1,#1
+		mov r2,#'T'
+		strb r2,[r1]
+		add r1,r1,#1
+		mov r2,#'A'
+		strb r2,[r1]
+		add r1,r1,#1
+		mov r2,#'R'
+		strb r2,[r1]
+		add r1,r1,#1
+		mov r2,#'T'
+		strb r2,[r1]
+		
+ini		ldr r0,=tecla_ini
+		ldrb r1,[r0]
+		cmp r1,#' '
+		bne ini
+		
+finDI   bl limpiar_pantalla
+
+		pop{r0-r3}
+		pop{fp, pc}
+
+
 
 
 		END
