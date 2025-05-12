@@ -30,8 +30,8 @@ dir1			DCB	0			; mov raqueta izda (-1 arriba, 0 stop, 1 abajo)
 dir2			DCB 0 			; mov raqueta d (-1 arriba, 0 stop, 1 abajo)
 dir3			DCB 0			; mov pelota(0-arriba izq, 1-arriba drch, 2-abajo izq, 3-abajo drch)
 fin				DCB 0			; si 1 fin del programa
-tecla 			DCB 0			; guardamos la ultima tecla leida
-
+tecla_r1		DCB 0			; tecla para controlar raq1
+tecla_r2		DCB 0			; tecla para controlar raq2
 
 		AREA codigo,CODE
 		EXPORT inicio			; forma de enlazar con el startup.s
@@ -64,6 +64,14 @@ inicio	; se recomienda poner punto de parada (breakpoint) en la primera
 
 fin_jugada
 		bl limpiar_pantalla
+		
+		ldr r10, =dir1
+		mov r11, #0
+		strb r11, [r10]
+		
+		ldr r10, =dir2
+		mov r11, #0
+		strb r11, [r10]
 
 		sub sp, sp, #4			; espacio para resultado (num aleatorio)
 		bl rand
@@ -167,18 +175,6 @@ f_b
 		
 		add r2, r0, r3
 		str r2, [r1]
-
-		;instante siguiente movimiento pelota
-		ldr r0, =crono
-		ldr r0, [r0]			; r0=crono
-		
-		ldr r1, =next1			; r1=dir next 
-		
-		ldr r3, =max
-		ldr r3, [r3]
-		
-		add r2, r0, r3
-		str r2, [r1]
 		
 ;bucle principal *********************************************************************************************************************
 		
@@ -188,63 +184,71 @@ bucle	;while(fin==0)
 		cmp r1, #0
 		bne fin_bucle
 		
+		;areglamos el timer
+		ldr r1, =next			; r1=dir next 
+		ldr r2, [r1]			; r2=next
 		
+		ldr r0, =crono
+if_c	ldr r4, [r0]			; r4=crono
+		cmp r4, r2				; crono < next
+		bne if_c		
+		
+		ldr r3, =max
+		ldr r3, [r3]
+		add r2, r4, r3
+		str r2, [r1]	
 
 		
 ;aclualizamos variables de direccion ----------------------------------------------------------------------------------------------------------
-		ldr r0, =tecla
-		ldrb r1,[r0]				; r1 = tecla
-		bic r1, r1, #2_100000	;paso a mayusculas
+	
+control_r1
+		ldr r0, =tecla_r1
+		ldrb r1,[r0]				; r1 = tecla_r1
 		
 		mov r4, #-1				;r4=-1
 		mov r5, #0				; r5=0
 		mov r6, #1				; r6=1
 		
-let_Q	cmp r1, #'Q'	
-		bne let_A				;
-		ldr r2, =dir1			;
-		ldrsb r3, [r2]			;
-		cmp r3, #-1				;
-		strbne r4, [r2]			;
-		strbeq	r5, [r2]
-		;bl mover1 
-		b f_uart				;
-		
-let_A	cmp r1, #'A'			;
-		bne let_O				;
-		ldr r2, =dir1
+		ldr r2, =dir1	
 		ldrsb r3, [r2]
-		cmp r3, #1				;
-		strbne r6, [r2]			;
+		
+let_Q	cmp r1, #'Q'	
+		bne else_A
+		cmp r3, #-1
 		strbeq r5, [r2]
-		;bl mover1
-		b f_uart
+		strbne r4, [r2]
+		b control_r2
+		
+else_A 	cmp r1, #'A'	
+		bne control_r2
+		cmp r3, #1
+		strbeq r5, [r2]
+		strbne r6, [r2]
+		b control_r2
 
 
-		ldr r0, =tecla
+control_r2
+		strb r5, [r0]				; hemos atendido a la tecla_r1
+		ldr r0, =tecla_r2
 		ldrb r1,[r0]				; r1 = tecla
 		
-let_O	cmp r1, #'O'			;
-		bne let_L
-		ldr r2, =dir2			;
-		ldrsb r3, [r2]			;
-		cmp r3, #-1				;
-		strneb r4, [r2]			;
-		streqb	r5, [r2]
-		;pasamos a la subrutina de mover raqueta 2
-		;bl mover2
-		b f_uart
-
-let_L	cmp r1, #'L'			;
-		bne plus				;
-		ldr r2, =dir2
+		ldr r2, =dir2	
 		ldrsb r3, [r2]
-		cmp r3, #1				;
-		strbne r6, [r2]			;
+		
+let_O	cmp r1, #'O'	
+		bne else_L
+		cmp r3, #-1
 		strbeq r5, [r2]
-		;pasamos a la subrutina de mover raqueta 2
-		;bl mover2 
-		b f_uart
+		strbne r4, [r2]
+		b control_vel
+else_L 	cmp r1, #'L'	
+		bne control_vel
+		cmp r3, #1
+		strbeq r5, [r2]
+		strbne r6, [r2]
+		b control_vel
+		
+control_vel	strb r5, [r0]		; heos atendido a la tecla 2
 
 plus	cmp r1, #'+'			;
 		bne minus				;
@@ -270,7 +274,9 @@ fin_6	cmp r1, #'6'
 		strb r5, [r2]
 		
 ;----------------------------------------------------------------------------------------------------------------------------------------------------
-f_uart	bl mover1
+f_uart
+		
+		bl mover1
 		bl mover2
 		
 		
@@ -278,19 +284,7 @@ f_uart	bl mover1
 		
 
 ; movimiento pelota			r0, r2
-				;areglamos el timer
-		ldr r1, =next			; r1=dir next 
-		ldr r2, [r1]			; r2=next
-		
-		ldr r0, =crono
-if_c	ldr r4, [r0]			; r4=crono
-		cmp r4, r2				; crono < next
-		bne if_c		
-		
-		ldr r3, =max
-		ldr r3, [r3]
-		add r2, r4, r3
-		str r2, [r1]			; next= crono+max
+						; next= crono+max
 		
 		;borrar elemento anterior 
 		ldr r0, =pos_pelota		; r0=dir pos_pelota!!!!!!!!!!!!!!!!!!!!!!!
@@ -606,11 +600,23 @@ rsi_teclado
 		
 ;tratamiento interrupcion
 		ldr r0, =UART_RDAT		;
-		ldrb r1, [r0]			;
-		ldr r2, =tecla
-		strb r1, [r2]
+		ldrb r1, [r0]
+		bic r1, r1, #2_100000	;paso a mayusculas
 		
+		ldr r2, =tecla_r1
+		cmp r1, #'A'
+		cmpne r1, #'Q'
+		bne tecla2
+		strbeq r1, [r2]
+		b fin_int
 		
+tecla2	ldr r2, =tecla_r2
+		cmp r1, #'O'
+		cmpne r1, #'L'
+		strbeq r1, [r2]
+		b fin_int
+		
+fin_int	
 ;desactivar irq
 		mrs r1, cpsr			;
 		orr r1, r1, #I_Bit		;
