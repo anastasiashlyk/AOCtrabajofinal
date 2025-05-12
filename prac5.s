@@ -23,7 +23,7 @@ pelota			EQU '*'
 raqueta			EQU 'X'
 
 crono 			DCD 0 			; contador de centesimas de segundo
-max				DCD 8 			; velocidad de movimiento en centesimas s. 
+max				DCD 3 			; velocidad de movimiento en centesimas s. 
 next 			DCD 0			; instante siguiente movimiento pelota
 next1			DCD 0			; instante siguiente movimiento raqueta1
 dir1			DCB	0			; mov raqueta izda (-1 arriba, 0 stop, 1 abajo)
@@ -32,6 +32,7 @@ dir3			DCB 0			; mov pelota(0-arriba izq, 1-arriba drch, 2-abajo izq, 3-abajo dr
 fin				DCB 0			; si 1 fin del programa
 tecla_r1		DCB 0			; tecla para controlar raq1
 tecla_r2		DCB 0			; tecla para controlar raq2
+tecla_vel		DCB 0 			; tecla para controlar velocidad
 
 		AREA codigo,CODE
 		EXPORT inicio			; forma de enlazar con el startup.s
@@ -249,42 +250,40 @@ else_L 	cmp r1, #'L'
 		b control_vel
 		
 control_vel	strb r5, [r0]		; heos atendido a la tecla 2
-
-plus	cmp r1, #'+'			;
-		bne minus				;
-		ldr r2, =max			;
+		
+		ldr r0, =tecla_vel
+		ldrb r1,[r0]				; r1 = tecla
+		
+		ldr r2, =max	
 		ldr r3, [r2]
-		cmp r3, #128			;¿velocidad maxima? se puede aumentar vel?
-		movne r3, r3, lsl#2
+		
+plus	cmp r1, #'+'			;
+		bne minus	
+		cmp r3, #1				;¿velocidad maxima? se puede aumentar vel?
+		movne r3, r3, lsr#2
 		strne r3, [r2]
 		b f_uart
 
 minus	cmp r1, #'-'			;
 		bne fin_6				;
-		ldr r2, =max			;
-		ldr r3, [r2]
-		cmp r3, #1				;¿velocidad minima? se puede disinuir vel?
-		movne r3, r3, lsr#2
+		cmp r3, #128			;¿velocidad minima? se puede disminuir vel?
+		movne r3, r3, lsl#2
 		strne r3, [r2]
 		b f_uart
 
-fin_6	cmp r1, #'6'	
-		bne f_uart
-		ldr r2, =fin
-		strb r5, [r2]
+fin_6	ldr r2, =fin
+		ldr r2, [r2]
+		cmp r2, #1
+		beq bfin
 		
 ;----------------------------------------------------------------------------------------------------------------------------------------------------
-f_uart
-		
-		bl mover1
+f_uart	bl mover1
 		bl mover2
 		
 		
 		
-		
-
-; movimiento pelota			r0, r2
-						; next= crono+max
+;*************************************************************************************************************************************************		
+;************************************************** MOVIMIENTO PELOTA ************************************************************************************
 		
 		;borrar elemento anterior 
 		ldr r0, =pos_pelota		; r0=dir pos_pelota!!!!!!!!!!!!!!!!!!!!!!!
@@ -615,6 +614,19 @@ tecla2	ldr r2, =tecla_r2
 		cmpne r1, #'L'
 		strbeq r1, [r2]
 		b fin_int
+		
+tecla3	ldr r2, =tecla_vel
+		cmp r1, #165			; '+' menos 32
+		cmpne r1, #164			; '-' menos 32
+		strbeq r1, [r2]
+		b fin_int
+		
+tec_fin	cmp r1, #22				; ASCII'6' - 32
+		bne fin_int
+		ldr r2, =fin
+		mov r3, #1
+		strb r3, [r2]
+		
 		
 fin_int	
 ;desactivar irq
