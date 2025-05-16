@@ -10,7 +10,7 @@ UART_RDAT		EQU 0xE0010000
 I_Bit 			EQU 0x80
 T0_IR			EQU 0xE0004000
 
-semilla 		EQU 55
+semilla 		EQU 22
 	
 pos_r1			DCD 0			; empezando desde abajo
 pos_r2			DCD 0
@@ -123,14 +123,16 @@ fin_jugada
 		;dibujamos raquetas en las posiciones aleatorias
 		and r1, r0, #0xF0
 		mov r1, r1, lsr #4
-		ldr r2, =0x40007e01		;base r1
+		cmp r1, #15
+		moveq r1,#0
+		ldr r2, =0x40007e21		;base r1
 		add r2,r2, r1, lsl#5	; 
 		mov r3, #raqueta
 		ldr r4, =pos_r1
 		str r2, [r4]					; r2 = dirrecion de la ficha inferior de la raqueta
 		
 		;limites r1
-		ldr r10, =0x40007e01			; base r1
+		ldr r10, =0x40007e21			; base r1
 		strb r3, [r2]					; 
 		
 		mov r1, #4
@@ -140,8 +142,8 @@ if_a	cmp r1, #0
 		sub r2, r2, #32
 		and r4, r2, #0xFF0
 		mov r4, r4, lsr #5
-		and r4, r4, #0xF				; mod 16 
-		
+		and r4, r4, #15				; mod 16 
+		and r4, r4, #8
 		add r11, r10, r4, lsl#5
 		strb r3, [r11]
 		sub r1, r1, #1
@@ -689,11 +691,12 @@ mover1
 		push {lr, fp}
 		push{r0-r11}
 		
-		ldr r0, =0x40007E01		; r0=pos_base_raqueta
+		ldr r0, =0x40007E21		; r0=pos_base_raqueta
 		ldr r1, =pos_r1		; r1=dir pos_raq
 		ldr r2, [r1]			; r2=pos_raq
 		ldr r3, =dir1			; r3=dir raqueta
 		ldrsb r3, [r3]
+		ldr r4, =0x40007FE1		; r4= posicion inferior
 		
 		mov r7, #' '
 		mov r8, #raqueta
@@ -706,19 +709,15 @@ mov_arriba
 		
 		strb r7, [r2]			; quitamos X de abajo
 		sub r2, r2, #32			; nueva posicion actual
-		and r2, r2, #0xFF0
-		mov r2, r2, lsr #5
-		and r2, r2, #0xF		; mod 16 
-		add r2, r0, r2, lsl#5	; sale del tablero?
+		cmp r2, r0
+		movgt r2, r4
 		str r2, [r1]			; guardamos posicion actual en memoria
 		
 		mov r10, #4
 		sub r2, r10, lsl#5		; posicion de la nueva ficha
 		
-		and r2, r2, #0xFF0
-		mov r2, r2, lsr #5
-		and r2, r2, #0xF		; mod 16 
-		add r2, r0, r2, lsl#5	; 
+		cmp r2, r0
+		movgt r2, r4
 		strb r8, [r2]			; dibujar nueva ficha
 		b fin_mover
 		
